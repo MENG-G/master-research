@@ -33,8 +33,9 @@ if __name__ == '__main__':
 
     
     # file_path = os.path.join(args.data_dir, args.paper)
-    file_path = r"C:/Users/kakum/Desktop/02_Research/00_Experimental Data/20210205_pg25%/mask/l90_2"
-    images = glob.glob(file_path + "/*ms.png")
+    # file_path = r"./l90_2"
+    # images = glob.glob(file_path + "/*ms.png")
+    images = ["./3816.667ms.png", "./3833.333ms.png"]
     images = sorted(images, key=lambda x: float(".".join(re.split("[./\\\ms]", x)[-5:-3])))
     
     info = [['x1', 'y1', 'x2', 'y2', 'x3', 'y3', 'x4', 'y4', 'filename']]
@@ -50,7 +51,7 @@ if __name__ == '__main__':
         
         info.append([x[0], y[0], x[3], y[3], x[1], y[1], x[2], y[2], image_path])
 
-    csv_path = r"C:/Users/kakum/Desktop/02_Research/00_Experimental Data/20210205_pg25%/mask/l90_2/points.csv"
+    csv_path = r"./points.csv"
     with open(csv_path, 'w', newline="") as csvfile:
         writer = csv.writer(csvfile)
         writer.writerows(info)

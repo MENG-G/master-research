@@ -4,7 +4,7 @@ import csv
 import os
 import re
 import numpy as np
-import rsa
+
 from calculate_evaporate import hu_and_larson
 import pandas as pd
 
@@ -87,7 +87,6 @@ def get_surface_area(R, h):
 
 
 def calculate_droplet_parameters(args):
-
     paper_names = ['l90', 'l130', 'l200', 'l250', 'o73', 'o84', 'o104', 'o128', 'next', 'sword']
     for paper_name in paper_names:
         for num in range(1, 7):
@@ -220,11 +219,47 @@ def get_initial_info(data_dir):
     df.to_csv("initial_informations.csv")
 
 
+def calculate_droplet_parameters_several(args):
+    input_path = "./points.csv"
+    data = [['time[s]', 'time[ms]', 'bottom radius', 'Mj(pL)', 'theta', 'area(m^2)']]
+    with open(input_path, 'r') as lines:
+        for i, line in enumerate(lines):
+            if i == 0:
+                continue
+
+            if len(re.split(r',', line)) == 8:
+                x1, y1, x2, y2, x3, y3, x4, y4, = re.split(r',', line)
+            else: 
+                x1, y1, x2, y2, x3, y3, x4, y4, _ = re.split(r',', line)
+            x1, y1, x2, y2, x3, y3, x4, y4 = float(x1), float(y1), float(x2), float(y2), float(x3), float(y3), float(x4), float(y4)
+            
+            # calculate sphere center and radius through 4 points
+            center_x1, center_y1, R1 = get_sphere(x1, y1, x2, y2, x3, y3)
+            center_x2, center_y2, R2 = get_sphere(x1, y1, x2, y2, x4, y4)
+            _, _, R = (center_x1 + center_x2) / 2, (center_y1 + center_y2) / 2, (R1 + R2) / 2
+
+            r = (math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2) / 2) * pixel_len2   # um
+            # calculate the height of droplet
+            R = R * pixel_len2
+            h = R - math.sqrt(R ** 2 - r ** 2)   # um
+            theta = get_contact_angle(h, r)
+            V = get_volume(r, h) # uL
+            S = get_surface_area(R, h) * 10 ** (-12) # m^2
+            
+            time = args.step * (i-1) / args.fps 
+            time_ms = time * 1000
+            info = [time, time_ms, r, V, theta, S]
+            data.append(info)
+    
+    # output_path = os.path.join(args.save_dir, paper_name + f'_{num}' + '.csv')
+    output_path = "./results.csv"
+    # write results to csv
+    with open(output_path, 'w', newline="") as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerows(data)
+
 
 
 if __name__=='__main__':
-
-    # data_dir = '../02_Research/00_Experimental Data/20210127_purewater/output_results' # pure water
-    # data_dir = '../02_Research/00_Experimental Data/20210205_pg25%/output_results/' # pg25
-    data_dir = '../02_Research/00_Experimental Data/20210208_pg50%/output_results/' # pg50
-    get_initial_info(data_dir)
+    args = parse()
+    calculate_droplet_parameters_several(args)

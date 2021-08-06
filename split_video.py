@@ -8,10 +8,12 @@ def parse():
     parser = argparse.ArgumentParser(description='extract frames from video')
     
     parser.add_argument('--data_dir', default='./', help='video directory')
-    parser.add_argument('--save_dir', default='./', help='folder where to save extracted frames')
-    parser.add_argument('--step', default=1, help='step')
-    parser.add_argument('--fps', default=60, help='fps')
-    parser.add_argument('--paper', default='l90_2', help='select papers')
+    parser.add_argument('--save_dir', 
+        default='C:/Users/kakum/Desktop/02_Research/00_Experimental Data/20210704_pigment/', 
+        help='folder where to save extracted frames')
+    parser.add_argument('--step', default=2, help='step')
+    parser.add_argument('--fps', default=10, help='fps')
+
     parser.add_argument('--verbose', default=True, help='whether to print log')
 
     args = parser.parse_args()
@@ -20,12 +22,8 @@ def parse():
 
 
 def extract_frames(video_path, args):
-    video_name = re.split("[\\\.]", video_path)[-2]
-    print(f"{video_name} started!")
-
+    video_name = re.split("[\\\./]", video_path)[-2]
     save_path = os.path.join(args.save_dir, video_name)
-    # print(save_path)
-    
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     
@@ -50,7 +48,7 @@ def extract_frames(video_path, args):
 
 if __name__=='__main__':
     args = parse()
-    video_lst = glob.glob("./*.mp4")
+    video_lst = glob.glob("../02_Research/00_Experimental Data/20210704_pigment/l130_pig6wt.mp4")
     for video_path in video_lst:
     # print(re.split("[\\\.]", video_lst[0])[-2])
     # print(video_lst)

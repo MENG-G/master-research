@@ -1,3 +1,4 @@
+from cProfile import label
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
@@ -73,7 +74,39 @@ def plot_mask_on_original_img():
         plt.show()    
 
 
+
+def plot_sim():
+
+
+    fig, ax = plt.subplots(figsize=(5, 4.5))
+    font = {'family': 'Times New Roman', 'weight': 'normal', 'size': 12}   
+    
+    data = pd.read_csv("./sim/data.csv")
+    ax.plot(data["D"], data["3um"], "o:", markersize=8, label="3 $\mathrm{\mu m}$")
+    ax.plot(data["D"], data["5um"], "^:", markersize=8, label="5 $\mathrm{\mu m}$")
+    ax.plot(data["D"], data["7um"], "s:", markersize=8, label="7 $\mathrm{\mu m}$")
+        
+    legend_labels = ax.legend(loc="best", frameon=False).get_texts()
+    [label.set_fontname('Times New Roman') for label in legend_labels]
+    # 设置xy轴标签
+    ax.set_ylabel("Permeation TIme [$\mathrm{s}$]", font)
+    ax.set_xlabel("Darcy Coefficient 1/K [$\mathrm{1/m^2}$]", font)
+    plt.tick_params(labelsize=12)
+    
+    tick_labels = ax.get_xticklabels() + ax.get_yticklabels()
+    [label.set_fontname('Times New Roman') for label in tick_labels]
+
+    fig.tight_layout()
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+    # ax.set_xlim()
+    # ax.set_ylim()
+    # plt.show()
+    plt.savefig("sim.png", dpi=500) 
+
+
 if __name__ == '__main__':
     save_fig = True
     show = False
-    plot_mask_on_original_img()
+    # plot_mask_on_original_img()
+    plot_sim()

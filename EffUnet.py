@@ -1,9 +1,4 @@
-import numpy as np
-import pathlib
-import pandas as pd
-import numba, cv2, gc, os, glob
-from tqdm.notebook import tqdm
-import matplotlib.pyplot as plt
+from tqdm import tqdm
 from albumentations import *
 import torch
 import torch.nn as nn
@@ -17,16 +12,18 @@ import pandas as pd
 import glob
 import re
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
 from calculate_volume import get_sphere, get_volume, get_contact_angle, get_distance, get_surface_area
 import math
-
+import os
 
 ENCODER_NAME = 'efficientnet-b4'
 pixel_len1 = 0.9748102696798955 # 5x
-pixel_len2 = 0.2418065541763232 # 20x
+# pixel_len2 = 0.2418065541763232 # 20x
+pixel_len2 = 3.571428 * 1.125
 
+fps = 10
+step = 2
 
 class DropletModel(nn.Module):
     def __init__(self):
@@ -34,7 +31,7 @@ class DropletModel(nn.Module):
         self.model = Unet(encoder_name = ENCODER_NAME, 
                           encoder_weights = 'imagenet',
                           classes = 1,
-                          activation = None)
+                          activation = 'sigmoid')
 
     def forward(self, images):
         img_masks = self.model(images)
@@ -53,32 +50,37 @@ def predict(data_dir_lst, model_path):
     model.float()
     model.to(device)
     model.eval()
-
+    
     for data_dir in data_dir_lst:
         data_dir_path = f"./{data_dir}/"
-        img_lst = glob.glob(data_dir_path + "*.png")
-
-        for img_path in img_lst:
+        img_lst = glob.glob(data_dir_path + "*ms.png")
+        pbar = tqdm(img_lst)
+        for img_path in pbar:
             img_name = ".".join(re.split("[./\\\]", img_path)[-3:-1])
-
+            # img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY)
+            # img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
             img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2RGB)
+            img = cv2.resize(img, (640, 480), interpolation=cv2.INTER_LANCZOS4)
+
             img = preprocessing_fn(image = img)['image']
             # change channel to be the first
             img = img.transpose((2, 0, 1))
+
             img = torch.from_numpy(img).view([1, 3, 480, 640]).to(device)
 
             pred_mask_btch = model(img.float())
 
             pred = pred_mask_btch.detach().numpy().squeeze()
 
-            pred[pred<0] = 0
-            pred[pred>0] = 255
+            pred[pred<0.9] = 0
+            pred[pred>=0.9] = 255
             cv2.imwrite(data_dir_path + img_name + "_mask.png", pred)
+        # break
 
 
 def cal_params(data_dir_lst):
     for data_dir in data_dir_lst:
-        data_dir_path = f"./{data_dir}/"
+        data_dir_path = f"{data_path}/{data_dir}/"
         if not os.path.exists(data_dir_path):
             continue
         
@@ -88,8 +90,8 @@ def cal_params(data_dir_lst):
         result_dict = {}
         for s in ["time[ms]", "bottom_radius[um]", "theta[degree]", "height[um]", "area[m^2]", "Mj[pL]"]:
             result_dict[s] = []
-
-        for n, img_path in enumerate(img_lst):
+        pbar = tqdm(img_lst)
+        for n, img_path in enumerate(pbar):
             img_name = ".".join(re.split("[./\\\]", img_path)[-3:-1])
     #         print(float(".".join(re.split("[./\\\m]", img_path)[-5:-3])))
             
@@ -168,7 +170,7 @@ def cal_params(data_dir_lst):
             V = get_volume(r, h)  # pL
             S = get_surface_area(R, h) * 10 ** (-12) # m^2
             
-            time_ms = n / 60 * 1000 # ms
+            time_ms = n / fps * step * 1000 # ms
 
             result_dict["time[ms]"].append(time_ms)
             result_dict["bottom_radius[um]"].append(r)
@@ -187,10 +189,10 @@ def cal_params(data_dir_lst):
             cv2.circle(img, (x4, y4), 1, (0, 255, 255), 8)
             cv2.circle(img, (x5, y5), 1, (0, 255, 255), 8)
             
-            cv2.imwrite(f"./{data_dir}/{img_name}_processed.png", img)
+            cv2.imwrite(f"{data_path}/{data_dir}/{img_name}_processed.png", img)
 
         df = pd.DataFrame(result_dict)
-        df.to_csv(f"./output_results/{data_dir}.csv", index=False)    
+        df.to_csv(f"{data_path}/output_results/{data_dir}.csv", index=False)    
 
 
 def cal_line(x1, y1, x2, y2, x_y, flag):
@@ -220,10 +222,10 @@ def cal_line(x1, y1, x2, y2, x_y, flag):
 
 if __name__ == '__main__':
 
-    data_dir_lst = ["20210507_PW_1"]
-    model_path = '../fold0_epoch11.pth'
-
-    predict(data_dir_lst, model_path)
+    data_dir_lst = ["l130_pig6wt"]
+    model_path = './fold0_epoch11.pth'
+    data_path = "C:/Users/kakum/Desktop/02_Research/00_Experimental Data/20210704_pigment/"
+    # predict(data_dir_lst, model_path)
     cal_params(data_dir_lst)
 
 
